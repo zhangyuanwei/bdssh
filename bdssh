@@ -1,0 +1,71 @@
+#!/usr/bin/expect -f
+set username "XXXXXXXXX" #这里写你的用户名
+set prepass "XXXXXX" #这里写你的密码
+set server "relay01.baidu.com"
+
+set timeout -1
+
+if { "$env(TERM)" == "fbterm" } {
+    set env(TERM) linux
+}
+
+log_user 0
+#spawn zssh -z ^S "$username@$server"
+spawn ssh "$username@$server"
+
+#捕获窗口大小改变信号
+trap {
+    set rows "[stty rows]"
+    set cols "[stty columns]"
+    stty rows "$rows" columns "$cols" < $spawn_out(slave,name)
+} WINCH
+
+#登录 Relay
+expect {
+	eof { exit 1 }
+	"(yes/no)" { send "yes\n"; exp_continue }
+	-re "Enter PASSCODE:|Password:|password:" {
+		send_user "Enter SecurID:"
+		expect_user {
+			-re (.*)\n {
+				send "$prepass$expect_out(1,string)\n"
+			}
+		}
+		exp_continue
+	}
+	"bash-baidu-ssl\\\$" { }
+}
+
+#登录具体线上机
+if {$argc} {
+	set argidx 0
+	set password ""
+
+	send "ssh"
+	while { $argidx < $argc } {
+		set argvi "[lindex $argv $argidx]"
+		if { $argvi == "-P" } {
+			incr argidx
+			set password "[lindex $argv $argidx]"
+		} else {
+			send " $argvi"
+		}
+		incr argidx
+	}
+	send ";exit\n"
+
+	if { "$password" != "" } {
+		expect {
+			eof { exit 1 }
+			"(yes/no)" { send "yes\n"; exp_continue }
+			"password:" {
+				send "$password\n"
+			}
+            "$" {  }
+		}
+    }
+} else {
+	send "\n"
+}
+
+interact
