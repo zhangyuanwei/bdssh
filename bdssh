@@ -1,6 +1,6 @@
 #!/usr/bin/expect -f
-set username "XXXXXXXXX" #这里写你的用户名
-set prepass "XXXXXX" #这里写你的密码
+set username "这里写你的用户名" 
+set prepass "这里写你的密码"
 set server "relay01.baidu.com"
 
 set timeout -1
